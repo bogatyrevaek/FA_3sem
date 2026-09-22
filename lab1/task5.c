@@ -163,7 +163,7 @@ static double integrate(double (*f)(double), double a, double b, double eps) {
 
 static double func_a(double x) {
     if (x == 0.0) {
-        return 1.0;   /* предел ln(1+x)/x при x→0 */
+        return 1.0;
     }
     return log(1.0 + x) / x;
 }
@@ -178,7 +178,7 @@ static double func_c(double x) {
 
 static double func_d(double x) {
     if (x == 0.0) {
-        return 1.0;   /* предел x^x при x→0 */
+        return 1.0;
     }
     return pow(x, x);
 }
