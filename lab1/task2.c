@@ -9,6 +9,8 @@ enum errors {
     RANGE_ERROR
 };
 
+#define M_PI 3.14159265358979323846
+
 static enum errors parse_epsilon(const char *s, double *out_eps) {
     if (s == NULL || out_eps == NULL) {
         return PARSE_ERROR;
@@ -32,10 +34,10 @@ static enum errors parse_epsilon(const char *s, double *out_eps) {
     }
     if (s[i] == '.') {
         i++;
-        double fraction = 0.1;
+        double y = 0.1;
         while (s[i] >= '0' && s[i] <= '9') {
-            result += (s[i] - '0') * fraction;
-            fraction /= 10.0;
+            result += (s[i] - '0') * y;
+            y /= 10.0;
             i++;
             digits++;
         }
@@ -83,17 +85,19 @@ double limit_e(double eps) {
 }
 
 double row_e(double eps) {
-    double current = 1.0;
-    double term = 1.0;
+    double sum = 1.0;
+    double x = 1.0;
     int n = 1;
     do {
-        term *= 1.0 / n;
-        current += term;
+        x *= 1.0 / n;
+        sum += x;
         n++;
-    } while (term >= eps);
-    return current;
+    } while (x >= eps);
+    return sum;
 }
 
+/* ln x = 1 — корень x = e.
+   Метод Ньютона: x = x - (ln x - 1) * x. */
 double equation_e(double eps) {
     double x = 3;
     double f = 1;
@@ -105,34 +109,33 @@ double equation_e(double eps) {
 }
 
 double limit_pi(double eps) {
-    int n = 1;
-    double current = 0, previous = 0;
+    double eff_eps = eps * eps;
+    double product = 1.0;
+    double prev = 0;
+    int k = 1;
     do {
-        previous = current;
-        n++;
-        double ln_pi = 4.0 * (n * log(2.0) + ln_factorial(n))
-                     - log((double)n)
-                     - 2.0 * ln_factorial(2 * n);
-        current = exp(ln_pi);
-    } while (fabs(previous - current) >= eps);
-    return current;
+        prev = product;
+        product *= (2.0 * k * 2.0 * k) / ((2.0 * k - 1) * (2.0 * k + 1));
+        k++;
+    } while (fabs(product - prev) >= eff_eps);
+    return 2.0 * product;
 }
 
 double row_pi(double eps) {
     double sum = 0;
     double sign = 1;
     int n = 1;
-    double term;
+    double x;
     do {
-        term = 1.0 / (2 * n - 1);
-        sum += sign * term;
+        x = 1.0 / (2 * n - 1);
+        sum += sign * x;
         sign = -sign;
         n++;
-    } while (term >= eps);
+    } while (x >= eps);
     return 4 * sum;
 }
 
-/* cos x = -1: корень x = π — двойной (производная = 0),
+/* cos x = -1: производная = 0 (x_(n+1) = x_n − f(x_n) / f'(x_n)),
    метод Ньютона ломается. Решаем эквивалентное cos(x/2) = 0. */
 double equation_pi(double eps) {
     double x = 3.5;
@@ -159,13 +162,13 @@ double row_ln(double eps) {
     double sum = 0;
     double sign = 1;
     int n = 1;
-    double term;
+    double x;
     do {
-        term = 1.0 / n;
-        sum += sign * term;
+        x = 1.0 / n;
+        sum += sign * x;
         sign = -sign;
         n++;
-    } while (term >= eps);
+    } while (x >= eps);
     return sum;
 }
 
@@ -191,13 +194,13 @@ double limit_sqrt(double eps) {
 
 double row_sqrt(double eps) {
     double sum = 0;
-    double term;
+    double x;
     int k = 2;
     do {
-        term = pow(2.0, -k);
-        sum += term;
+        x = pow(2.0, -k);
+        sum += x;
         k++;
-    } while (term >= eps);
+    } while (x >= eps);
     return pow(2.0, sum);
 }
 
