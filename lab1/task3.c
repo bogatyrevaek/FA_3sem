@@ -159,8 +159,7 @@ static enum errors triangle(double a, double b, double c, double eps, int *out_r
     return OK;
 }
 
-static enum errors equation(double a, double b, double c, double eps,
-                                   double *x1, double *x2, int *count) {
+static enum errors equation(double a, double b, double c, double eps, double *x1, double *x2, int *count) {
     if (x1 == NULL || x2 == NULL || count == NULL) {
         return RANGE_ERROR;
     } if (eps <= 0) {
@@ -200,8 +199,7 @@ static enum errors equation(double a, double b, double c, double eps,
     }
 }
 
-static int same_coef(double a1, double b1, double c1,
-                       double a2, double b2, double c2, double eps) {
+static int same_coef(double a1, double b1, double c1, double a2, double b2, double c2, double eps) {
     return fabs(a1 - a2) < eps
         && fabs(b1 - b2) < eps
         && fabs(c1 - c2) < eps;
