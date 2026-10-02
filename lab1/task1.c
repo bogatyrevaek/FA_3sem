@@ -138,8 +138,8 @@ static enum errors to_hex_digits(long long x, char *buf, int *out_len) {
 
     int len = 0;
     while (x > 0) {
-        int rem = (int)(x % 16);
-        buf[len] = digits[rem];
+        int y = (int)(x % 16);
+        buf[len] = digits[y];
         len++;
         x /= 16;
     }
