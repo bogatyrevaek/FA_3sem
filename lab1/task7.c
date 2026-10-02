@@ -9,8 +9,7 @@ enum errors {
     ARGC_ERROR,
     FLAG_ERROR,
     RANGE_ERROR,
-    FILE_ERROR,
-    MEMORY_ERROR
+    FILE_ERROR
 };
 
 static enum errors parse_flag(const char *s, char *out_flag) {
