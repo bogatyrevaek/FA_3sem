@@ -171,17 +171,23 @@ static enum errors is_convex(int n, int *out, ...) {
         double cross = abx * bcy - aby * bcx;
         if (cross > 0) {
             if (sign == 0) sign = 1;
-            else if (sign == -1) { *out = 0; return OK; }
+            else if (sign == -1) {
+                *out = 0;
+                return OK;
+            }
         } else if (cross < 0) {
             if (sign == 0) sign = -1;
-            else if (sign == 1) { *out = 0; return OK; }
+            else if (sign == 1) {
+                *out = 0;
+                return OK;
+            }
         }
     }
     *out = (sign != 0) ? 1 : 0;
     return OK;
 }
 
-static int char_to_digit_b6(char c) {
+static int char_to_digit(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'A' && c <= 'Z') return c - 'A' + 10;
     return -1;
@@ -236,7 +242,7 @@ static enum errors count_kaprekar(int base, int count, int *out_count, ...) {
         unsigned long long n = 0;
         int digits_count = 0;
         for (int j = 0; s[j] != '\0'; ++j) {
-            int d = char_to_digit_b6(s[j]);
+            int d = char_to_digit(s[j]);
             if (d < 0 || d >= base) {
                 va_end(ap);
                 return PARSE_ERROR;
@@ -265,7 +271,7 @@ static void demo_polynomial(void) {
         fprintf(stderr, "Некорректный ввод\n");
         return;
     }
-    printf("Введите степень n (0..%d): ", MAX_ARGS);
+    printf("Введите степень n (0-%d): ", MAX_ARGS);
     if (read_int(&n) != OK) {
         fprintf(stderr, "Некорректный ввод\n");
         return;
