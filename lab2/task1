@@ -1,0 +1,418 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+enum errors {
+    OK,
+    ARGC_ERROR,
+    FLAG_ERROR,
+    PARSE_ERROR,
+    RANGE_ERROR,
+    MEMORY_ERROR
+};
+
+static int my_strlen(const char *s) {
+    int len = 0;
+    while (s[len] != '\0') {
+        len++;
+    }
+    return len;
+}
+
+static void my_strcpy(char *dst, const char *src) {
+    int i = 0;
+    while (src[i] != '\0') {
+        dst[i] = src[i];
+        i++;
+    }
+    dst[i] = '\0';
+}
+
+static char *my_strdup(const char *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+    int len = my_strlen(src);
+    char *copy = malloc((len + 1) * sizeof(char));
+    if (copy == NULL) {
+        return NULL;
+    }
+    my_strcpy(copy, src);
+    return copy;
+}
+
+static void reverse_inplace(char *s) {
+    int i = 0;
+    int j = my_strlen(s) - 1;
+    while (i < j) {
+        char tmp = s[i];
+        s[i] = s[j];
+        s[j] = tmp;
+        i++;
+        j--;
+    }
+}
+
+static int is_alpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static int is_digit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+static char to_upper(char c) {
+    if (c >= 'a' && c <= 'z') {
+        return (char)(c - 'a' + 'A');
+    }
+    return c;
+}
+
+static enum errors parse_flag(const char *s, char *out_flag) {
+    if (s == NULL || out_flag == NULL) {
+        return FLAG_ERROR;
+    }
+    if (my_strlen(s) != 2) {
+        return FLAG_ERROR;
+    }
+    if (s[0] != '-' && s[0] != '/') {
+        return FLAG_ERROR;
+    }
+    char c = s[1];
+    if (c != 'l' && c != 'r' && c != 'u' && c != 'n' && c != 'c') {
+        return FLAG_ERROR;
+    }
+    *out_flag = c;
+    return OK;
+}
+
+static enum errors parse_uint(const char *s, unsigned int *out_x) {
+    if (s == NULL || out_x == NULL) {
+        return PARSE_ERROR;
+    }
+    if (*s == '\0') {
+        return PARSE_ERROR;
+    }
+
+    for (int i = 0; s[i] != '\0'; i++) {
+        if (!is_digit(s[i])) {
+            return PARSE_ERROR;
+        }
+    }
+
+    int i = 0;
+    while (s[i] == '0') {
+        i++;
+    }
+
+    unsigned long long result = 0;
+    while (s[i] != '\0') {
+        int d = s[i] - '0';
+        if (result > (ULLONG_MAX - (unsigned long long)d) / 10ULL) {
+            return PARSE_ERROR;
+        }
+        result = result * 10ULL + (unsigned long long)d;
+        i++;
+    }
+
+    if (result > (unsigned long long)UINT_MAX) {
+        return RANGE_ERROR;
+    }
+
+    *out_x = (unsigned int)result;
+    return OK;
+}
+
+static enum errors flag_l(const char *s, int *out_len) {
+    if (s == NULL || out_len == NULL) {
+        return RANGE_ERROR;
+    }
+    *out_len = my_strlen(s);
+    return OK;
+}
+
+static enum errors flag_r(const char *s, char **out_str) {
+    if (s == NULL || out_str == NULL) {
+        return RANGE_ERROR;
+    }
+    *out_str = NULL;
+    char *copy = my_strdup(s);
+    if (copy == NULL) {
+        return MEMORY_ERROR;
+    }
+    reverse_inplace(copy);
+    *out_str = copy;
+    return OK;
+}
+
+static enum errors flag_u(const char *s, char **out_str) {
+    if (s == NULL || out_str == NULL) {
+        return RANGE_ERROR;
+    }
+    *out_str = NULL;
+    char *copy = my_strdup(s);
+    if (copy == NULL) {
+        return MEMORY_ERROR;
+    }
+    for (int i = 0; copy[i] != '\0'; i++) {
+        if (i % 2 == 1) {
+            copy[i] = to_upper(copy[i]);
+        }
+    }
+    *out_str = copy;
+    return OK;
+}
+
+static enum errors flag_n(const char *s, char **out_str) {
+    if (s == NULL || out_str == NULL) {
+        return RANGE_ERROR;
+    }
+    *out_str = NULL;
+    int len = my_strlen(s);
+    char *result = malloc((len + 1) * sizeof(char));
+    if (result == NULL) {
+        return MEMORY_ERROR;
+    }
+
+    int pos = 0;
+
+    for (int i = 0; i < len; i++) {
+        if (is_digit(s[i])) {
+            result[pos++] = s[i];
+        }
+    }
+    for (int i = 0; i < len; i++) {
+        if (is_alpha(s[i])) {
+            result[pos++] = s[i];
+        }
+    }
+    for (int i = 0; i < len; i++) {
+        if (!is_digit(s[i]) && !is_alpha(s[i])) {
+            result[pos++] = s[i];
+        }
+    }
+    result[pos] = '\0';
+
+    *out_str = result;
+    return OK;
+}
+
+static void shuffle(char **arr, int n) {
+    for (int i = n - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        char *tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+
+static enum errors flag_c(char **strings, int count, char **out_str) {
+    if (strings == NULL || out_str == NULL) {
+        return RANGE_ERROR;
+    }
+    *out_str = NULL;
+
+    long long total = 0;
+    for (int i = 0; i < count; i++) {
+        total += my_strlen(strings[i]);
+        if (total > INT_MAX - 1) {
+            return RANGE_ERROR;
+        }
+    }
+
+    char **order = malloc(count * sizeof(char *));
+    if (order == NULL) {
+        return MEMORY_ERROR;
+    }
+    for (int i = 0; i < count; i++) {
+        order[i] = strings[i];
+    }
+
+    shuffle(order, count);
+
+    char *result = malloc((size_t)(total + 1) * sizeof(char));
+    if (result == NULL) {
+        free(order);
+        return MEMORY_ERROR;
+    }
+
+    int pos = 0;
+    for (int i = 0; i < count; i++) {
+        const char *src = order[i];
+        int k = 0;
+        while (src[k] != '\0') {
+            result[pos++] = src[k++];
+        }
+    }
+    result[pos] = '\0';
+
+    free(order);
+    *out_str = result;
+    return OK;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        fprintf(stderr, "Неверное количество аргументов\n");
+        fprintf(stderr, "Использование: %s <флаг> <строка> [seed] [строки...]\n", argv[0]);
+        return ARGC_ERROR;
+    }
+
+    char flag = '\0';
+    enum errors err = parse_flag(argv[1], &flag);
+    switch (err) {
+        case OK:
+            break;
+        case FLAG_ERROR:
+            fprintf(stderr, "Неизвестный флаг '%s'\n", argv[1]);
+            return err;
+        default:
+            fprintf(stderr, "Непредвиденная ситуация\n");
+            return err;
+    }
+
+    const char *str = argv[2];
+
+    switch (flag) {
+        case 'l': {
+            if (argc != 3) {
+                fprintf(stderr, "Для флага -l должно быть 3 аргумента\n");
+                return ARGC_ERROR;
+            }
+            int len = 0;
+            err = flag_l(str, &len);
+            switch (err) {
+                case OK:
+                    printf("%d\n", len);
+                    break;
+                default:
+                    fprintf(stderr, "Непредвиденная ситуация\n");
+                    return err;
+            }
+        } break;
+
+        case 'r': {
+            if (argc != 3) {
+                fprintf(stderr, "Для флага -r должно быть 3 аргумента\n");
+                return ARGC_ERROR;
+            }
+            char *result = NULL;
+            err = flag_r(str, &result);
+            switch (err) {
+                case OK:
+                    printf("%s\n", result);
+                    free(result);
+                    break;
+                case MEMORY_ERROR:
+                    fprintf(stderr, "Ошибка выделения памяти\n");
+                    return err;
+                default:
+                    fprintf(stderr, "Непредвиденная ситуация\n");
+                    return err;
+            }
+        } break;
+
+        case 'u': {
+            if (argc != 3) {
+                fprintf(stderr, "Для флага -u должно быть 3 аргумента\n");
+                return ARGC_ERROR;
+            }
+            char *result = NULL;
+            err = flag_u(str, &result);
+            switch (err) {
+                case OK:
+                    printf("%s\n", result);
+                    free(result);
+                    break;
+                case MEMORY_ERROR:
+                    fprintf(stderr, "Ошибка выделения памяти\n");
+                    return err;
+                default:
+                    fprintf(stderr, "Непредвиденная ситуация\n");
+                    return err;
+            }
+        } break;
+
+        case 'n': {
+            if (argc != 3) {
+                fprintf(stderr, "Для флага -n должно быть 3 аргумента\n");
+                return ARGC_ERROR;
+            }
+            char *result = NULL;
+            err = flag_n(str, &result);
+            switch (err) {
+                case OK:
+                    printf("%s\n", result);
+                    free(result);
+                    break;
+                case MEMORY_ERROR:
+                    fprintf(stderr, "Ошибка выделения памяти\n");
+                    return err;
+                default:
+                    fprintf(stderr, "Непредвиденная ситуация\n");
+                    return err;
+            }
+        } break;
+
+        case 'c': {
+            if (argc < 5) {
+                fprintf(stderr, "Флаг -c требует seed и хотя бы одну строку после seed\n");
+                return ARGC_ERROR;
+            }
+
+            unsigned int seed = 0;
+            err = parse_uint(argv[3], &seed);
+            switch (err) {
+                case OK:
+                    break;
+                case PARSE_ERROR:
+                    fprintf(stderr, "Некорректный seed '%s'\n", argv[3]);
+                    return err;
+                case RANGE_ERROR:
+                    fprintf(stderr, "Seed выходит за пределы unsigned int\n");
+                    return err;
+                default:
+                    fprintf(stderr, "Непредвиденная ситуация\n");
+                    return err;
+            }
+            srand(seed);
+
+            int count = 1 + (argc - 4);
+            char **strings = malloc(count * sizeof(char *));
+            if (strings == NULL) {
+                fprintf(stderr, "Ошибка выделения памяти\n");
+                return MEMORY_ERROR;
+            }
+
+            strings[0] = argv[2];
+            for (int i = 0; i < argc - 4; i++) {
+                strings[1 + i] = argv[4 + i];
+            }
+
+            char *result = NULL;
+            err = flag_c(strings, count, &result);
+            free(strings);
+            switch (err) {
+                case OK:
+                    printf("%s\n", result);
+                    free(result);
+                    break;
+                case MEMORY_ERROR:
+                    fprintf(stderr, "Ошибка выделения памяти\n");
+                    return err;
+                case RANGE_ERROR:
+                    fprintf(stderr, "Слишком длинная результирующая строка\n");
+                    return err;
+                default:
+                    fprintf(stderr, "Непредвиденная ситуация\n");
+                    return err;
+            }
+        } break;
+
+        default:
+            fprintf(stderr, "Непредвиденная ситуация: флаг '%c'\n", flag);
+            return FLAG_ERROR;
+    }
+
+    return OK;
+}
